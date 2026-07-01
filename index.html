@@ -47,25 +47,38 @@ body {
 
 .pick-label { font-size:13px; font-weight:800; color:#636E72; letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px; text-align:center; }
 
-.subjects-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px; }
+.subjects-grid {
+  display: flex; flex-direction: row; gap: 12px;
+  margin-bottom: 28px; overflow-x: auto;
+  padding-bottom: 6px; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.subjects-grid::-webkit-scrollbar { height: 4px; }
+.subjects-grid::-webkit-scrollbar-track { background: #E8E4F8; border-radius: 99px; }
+.subjects-grid::-webkit-scrollbar-thumb { background: #A29BFE; border-radius: 99px; }
 
 .subj-card {
-  background:#fff; border-radius:22px; padding:20px 16px;
+  background:#fff; border-radius:22px; padding:18px 12px 14px;
   border:3px solid transparent;
   cursor:pointer; text-align:center;
   transition:transform .18s, border-color .18s, box-shadow .18s;
   box-shadow:0 4px 16px rgba(0,0,0,.07);
   position:relative; user-select:none;
+  flex: 1 0 130px; min-width: 130px; max-width: 160px;
+  scroll-snap-align: start;
 }
 .subj-card:hover { transform:translateY(-4px); box-shadow:0 10px 28px rgba(0,0,0,.11); }
 .subj-card.selected { border-color:var(--accent); box-shadow:0 8px 28px rgba(0,0,0,.13); }
 .subj-card.selected::after {
-  content:'✓'; position:absolute; top:10px; right:14px;
-  font-size:16px; font-weight:900; color:var(--accent);
+  content:'✓'; position:absolute; top:8px; right:12px;
+  font-size:15px; font-weight:900; color:var(--accent);
 }
-.subj-icon { font-size:42px; display:block; margin-bottom:8px; }
-.subj-name { font-size:17px; font-weight:900; color:#2D3436; margin-bottom:3px; }
-.subj-count { font-size:12px; color:#636E72; font-weight:700; }
+.subj-icon { font-size:40px; display:block; margin-bottom:8px; line-height:1.1; }
+.subj-icon-flag {
+  width:48px; height:48px; display:block; margin:0 auto 8px;
+}
+.subj-name { font-size:14px; font-weight:900; color:#2D3436; margin-bottom:3px; }
+.subj-count { font-size:11px; color:#636E72; font-weight:700; }
 .subj-bar { height:5px; border-radius:99px; margin-top:10px; background:var(--accent); opacity:.25; }
 .subj-card.selected .subj-bar { opacity:1; }
 
@@ -236,7 +249,7 @@ body {
 
 /* ── Responsive ── */
 @media(max-width:420px){
-  .subjects-grid{grid-template-columns:1fr}
+  .subj-card { flex: 0 0 120px; min-width:120px; }
   .answers{grid-template-columns:1fr}
   .app-title{font-size:24px}
   .q-text{font-size:17px}
@@ -295,7 +308,24 @@ body {
         <div class="subj-bar"></div>
       </div>
       <div class="subj-card sc-nepali" data-subj="nepali" onclick="toggleSubject(this)">
-        <span class="subj-icon">🇳🇵</span>
+        <svg class="subj-icon-flag" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" aria-label="Nepal flag">
+          <!-- Nepal double-pennon flag -->
+          <polygon points="2,2 38,18 2,34" fill="#DC143C" stroke="#003893" stroke-width="2.5"/>
+          <polygon points="2,30 32,44 2,58" fill="#DC143C" stroke="#003893" stroke-width="2.5"/>
+          <!-- Moon symbol -->
+          <circle cx="14" cy="21" r="4" fill="white" opacity="0.9"/>
+          <circle cx="17" cy="20" r="3" fill="#DC143C"/>
+          <!-- Sun symbol -->
+          <circle cx="14" cy="44" r="5" fill="white" opacity="0.9"/>
+          <line x1="14" y1="38" x2="14" y2="36" stroke="white" stroke-width="1.2"/>
+          <line x1="14" y1="50" x2="14" y2="52" stroke="white" stroke-width="1.2"/>
+          <line x1="8"  y1="44" x2="6"  y2="44" stroke="white" stroke-width="1.2"/>
+          <line x1="20" y1="44" x2="22" y2="44" stroke="white" stroke-width="1.2"/>
+          <line x1="10" y1="40" x2="9"  y2="39" stroke="white" stroke-width="1.2"/>
+          <line x1="18" y1="48" x2="19" y2="49" stroke="white" stroke-width="1.2"/>
+          <line x1="18" y1="40" x2="19" y2="39" stroke="white" stroke-width="1.2"/>
+          <line x1="10" y1="48" x2="9"  y2="49" stroke="white" stroke-width="1.2"/>
+        </svg>
         <div class="subj-name">Nepali</div>
         <div class="subj-count">20 questions</div>
         <div class="subj-bar"></div>
