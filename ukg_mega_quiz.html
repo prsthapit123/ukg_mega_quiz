@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UKG Mega Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #F7F3FF;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Floating blobs ── */
+.blobs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.blob {
+  position: absolute; border-radius: 50%; opacity: 0.10;
+  animation: floatBlob 8s ease-in-out infinite;
+}
+.blob:nth-child(1){width:200px;height:200px;background:#A29BFE;top:-60px;left:-60px;animation-delay:0s}
+.blob:nth-child(2){width:150px;height:150px;background:#FF6B6B;top:20%;right:-40px;animation-delay:2s}
+.blob:nth-child(3){width:120px;height:120px;background:#FFE66D;bottom:30%;left:-30px;animation-delay:4s}
+.blob:nth-child(4){width:180px;height:180px;background:#4ECDC4;bottom:-50px;right:-50px;animation-delay:1s}
+@keyframes floatBlob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-18px) scale(1.04)}}
+
+/* ── Layout ── */
+.wrap { position:relative; z-index:1; max-width:700px; margin:0 auto; padding:24px 18px 48px; }
+
+/* ── Screens ── */
+.screen { display:none; }
+.screen.active { display:block; animation: fadeUp .4s cubic-bezier(.34,1.56,.64,1); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+/* ─────────────────────────────────────────────
+   SUBJECT SELECT SCREEN
+───────────────────────────────────────────── */
+.app-header { text-align:center; margin-bottom:30px; }
+.app-logo { font-size:56px; display:block; animation:bounce 2s ease-in-out infinite; margin-bottom:10px; }
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.app-title { font-size:30px; font-weight:900; color:#2D3436; line-height:1.15; }
+.app-title em { color:#A29BFE; font-style:normal; }
+.app-sub { font-size:14px; color:#636E72; font-weight:700; margin-top:5px; }
+
+.pick-label { font-size:13px; font-weight:800; color:#636E72; letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px; text-align:center; }
+
+.subjects-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px; }
+
+.subj-card {
+  background:#fff; border-radius:22px; padding:20px 16px;
+  border:3px solid transparent;
+  cursor:pointer; text-align:center;
+  transition:transform .18s, border-color .18s, box-shadow .18s;
+  box-shadow:0 4px 16px rgba(0,0,0,.07);
+  position:relative; user-select:none;
+}
+.subj-card:hover { transform:translateY(-4px); box-shadow:0 10px 28px rgba(0,0,0,.11); }
+.subj-card.selected { border-color:var(--accent); box-shadow:0 8px 28px rgba(0,0,0,.13); }
+.subj-card.selected::after {
+  content:'✓'; position:absolute; top:10px; right:14px;
+  font-size:16px; font-weight:900; color:var(--accent);
+}
+.subj-icon { font-size:42px; display:block; margin-bottom:8px; }
+.subj-name { font-size:17px; font-weight:900; color:#2D3436; margin-bottom:3px; }
+.subj-count { font-size:12px; color:#636E72; font-weight:700; }
+.subj-bar { height:5px; border-radius:99px; margin-top:10px; background:var(--accent); opacity:.25; }
+.subj-card.selected .subj-bar { opacity:1; }
+
+/* subject colours */
+.sc-science  { --accent:#4ECDC4; }
+.sc-maths    { --accent:#FF6B6B; }
+.sc-english  { --accent:#A29BFE; }
+.sc-gk       { --accent:#FFB74D; }
+.sc-nepali   { --accent:#F06292; }
+
+.start-row { text-align:center; }
+.start-btn {
+  background:#A29BFE; color:#fff; border:none; border-radius:20px;
+  padding:16px 48px; font-family:'Nunito',sans-serif; font-size:19px;
+  font-weight:900; cursor:pointer; box-shadow:0 6px 0 #6C5CE7;
+  transition:transform .15s, box-shadow .15s; opacity:.45; pointer-events:none;
+}
+.start-btn.ready { opacity:1; pointer-events:all; }
+.start-btn.ready:hover { transform:translateY(-3px); box-shadow:0 9px 0 #6C5CE7; }
+.start-btn.ready:active { transform:translateY(2px); box-shadow:0 3px 0 #6C5CE7; }
+
+/* ─────────────────────────────────────────────
+   QUIZ SCREEN
+───────────────────────────────────────────── */
+.quiz-hud {
+  display:flex; align-items:center; justify-content:space-between;
+  background:#fff; border-radius:18px; padding:12px 18px;
+  box-shadow:0 3px 14px rgba(0,0,0,.08); margin-bottom:14px;
+}
+.hud-subject { display:flex; align-items:center; gap:8px; }
+.hud-badge {
+  padding:5px 12px; border-radius:99px; font-size:12px; font-weight:800;
+  color:#fff; background:var(--subj-color, #A29BFE);
+}
+.hud-qnum { font-size:13px; font-weight:800; color:#636E72; }
+.hud-qnum span { color:#2D3436; font-size:19px; font-weight:900; }
+.hud-score-box { text-align:right; }
+.hud-score-label { font-size:11px; color:#636E72; font-weight:700; }
+.hud-score-val { font-size:20px; font-weight:900; color:#2D3436; }
+
+.prog-track { background:#E8E4F8; border-radius:99px; height:8px; margin-bottom:16px; overflow:hidden; }
+.prog-fill { height:100%; border-radius:99px; transition:width .5s ease; background:var(--subj-color,#A29BFE); }
+
+.q-card {
+  background:#fff; border-radius:26px;
+  box-shadow:0 8px 28px rgba(0,0,0,.09); padding:26px 22px 22px;
+  margin-bottom:16px;
+  animation:cardIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cardIn{from{opacity:0;transform:scale(.93) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.q-big-emoji { font-size:52px; display:block; text-align:center; margin-bottom:10px; }
+.q-text { font-size:19px; font-weight:800; color:#2D3436; text-align:center; line-height:1.4; margin-bottom:20px; }
+
+.answers { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+.ans-btn {
+  background:#F8F6FF; border:2.5px solid #E0D9FF; border-radius:16px;
+  padding:14px 10px; font-family:'Nunito',sans-serif;
+  font-size:15px; font-weight:800; color:#2D3436;
+  cursor:pointer; display:flex; flex-direction:column; align-items:center;
+  gap:5px; min-height:76px; justify-content:center; text-align:center;
+  transition:transform .14s, border-color .18s, background .18s;
+}
+.ans-btn:hover:not(:disabled){transform:translateY(-3px) scale(1.03);border-color:var(--subj-color,#A29BFE);background:#F0ECFF}
+.ans-btn .ae{font-size:22px}
+.ans-btn.correct{background:#D4EDDA!important;border-color:#28A745!important;color:#155724!important;animation:popIn .45s cubic-bezier(.34,1.56,.64,1)}
+.ans-btn.wrong{background:#F8D7DA!important;border-color:#DC3545!important;color:#721C24!important;animation:shakeX .4s ease}
+@keyframes popIn{0%{transform:scale(.95)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes shakeX{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+.fact-box {
+  margin-top:16px; border-radius:14px; padding:12px 15px;
+  font-size:14px; font-weight:700; line-height:1.55; display:none;
+}
+.fact-box.show { display:block; animation:fadeUp .35s ease; }
+.fact-head { font-size:14px; font-weight:900; margin-bottom:3px; }
+
+.nav-row { text-align:center; }
+.next-btn {
+  display:none; border:none; border-radius:17px;
+  padding:13px 36px; font-family:'Nunito',sans-serif;
+  font-size:17px; font-weight:900; color:#fff; cursor:pointer;
+  background:var(--subj-color,#A29BFE);
+  box-shadow:0 5px 0 rgba(0,0,0,.18);
+  transition:transform .15s, box-shadow .15s;
+  animation:fadeUp .4s ease;
+}
+.next-btn:hover{transform:translateY(-2px);box-shadow:0 7px 0 rgba(0,0,0,.18)}
+.next-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+
+/* ─────────────────────────────────────────────
+   RESULTS SCREEN
+───────────────────────────────────────────── */
+.result-card {
+  background:#fff; border-radius:28px;
+  box-shadow:0 10px 36px rgba(0,0,0,.10); padding:32px 24px;
+  text-align:center;
+}
+.result-emoji { font-size:72px; display:block; margin-bottom:10px; animation:bounce 1.2s ease infinite; }
+.result-title { font-size:26px; font-weight:900; color:#2D3436; margin-bottom:6px; }
+.result-score { font-size:48px; font-weight:900; color:var(--subj-color,#A29BFE); margin:10px 0; }
+.result-stars { font-size:30px; letter-spacing:5px; margin-bottom:8px; }
+.result-subj { font-size:14px; color:#636E72; font-weight:700; margin-bottom:6px; }
+.result-msg { font-size:15px; color:#636E72; font-weight:700; line-height:1.55; margin-bottom:28px; }
+
+.result-btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.rb {
+  border:none; border-radius:16px; padding:13px 28px;
+  font-family:'Nunito',sans-serif; font-size:16px; font-weight:900;
+  cursor:pointer; transition:transform .15s;
+}
+.rb:hover{transform:translateY(-2px)}
+.rb-again { background:var(--subj-color,#A29BFE); color:#fff; box-shadow:0 5px 0 rgba(0,0,0,.15); }
+.rb-home { background:#F0ECFF; color:#5A4FCF; box-shadow:0 5px 0 rgba(0,0,0,.08); }
+
+/* ── Confetti ── */
+.confetti-layer{position:fixed;inset:0;pointer-events:none;z-index:200;overflow:hidden}
+.cp{position:absolute;border-radius:2px;animation:cfFall linear forwards}
+@keyframes cfFall{0%{transform:translateY(-20px) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(720deg);opacity:0}}
+
+/* ── Responsive ── */
+@media(max-width:420px){
+  .subjects-grid{grid-template-columns:1fr}
+  .answers{grid-template-columns:1fr}
+  .app-title{font-size:24px}
+  .q-text{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<div class="blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+<div class="confetti-layer" id="confetti"></div>
+
+<div class="wrap">
+
+  <!-- ══════════════ SELECT SCREEN ══════════════ -->
+  <div class="screen active" id="screen-select">
+    <div class="app-header">
+      <span class="app-logo">🎓</span>
+      <h1 class="app-title">UKG <em>Mega</em> Quiz!</h1>
+      <p class="app-sub">Pick a subject and start learning!</p>
+    </div>
+
+    <p class="pick-label">Choose your subject</p>
+
+    <div class="subjects-grid">
+      <div class="subj-card sc-science" data-subj="science" onclick="toggleSubject(this)">
+        <span class="subj-icon">🔬</span>
+        <div class="subj-name">Science</div>
+        <div class="subj-count">20 questions</div>
+        <div class="subj-bar"></div>
+      </div>
+      <div class="subj-card sc-maths" data-subj="maths" onclick="toggleSubject(this)">
+        <span class="subj-icon">🔢</span>
+        <div class="subj-name">Maths</div>
+        <div class="subj-count">20 questions</div>
+        <div class="subj-bar"></div>
+      </div>
+      <div class="subj-card sc-english" data-subj="english" onclick="toggleSubject(this)">
+        <span class="subj-icon">📖</span>
+        <div class="subj-name">English</div>
+        <div class="subj-count">20 questions</div>
+        <div class="subj-bar"></div>
+      </div>
+      <div class="subj-card sc-gk" data-subj="gk" onclick="toggleSubject(this)">
+        <span class="subj-icon">🌍</span>
+        <div class="subj-name">General Knowledge</div>
+        <div class="subj-count">20 questions</div>
+        <div class="subj-bar"></div>
+      </div>
+      <div class="subj-card sc-nepali" data-subj="nepali" onclick="toggleSubject(this)">
+        <span class="subj-icon">🇳🇵</span>
+        <div class="subj-name">Nepali</div>
+        <div class="subj-count">20 questions</div>
+        <div class="subj-bar"></div>
+      </div>
+    </div>
+
+    <div class="start-row">
+      <button class="start-btn" id="start-btn" onclick="startQuiz()">Start Quiz ➜</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ QUIZ SCREEN ══════════════ -->
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-hud">
+      <div class="hud-subject">
+        <span class="hud-badge" id="hud-badge">Science</span>
+      </div>
+      <div class="hud-qnum">Q <span id="hud-qnum">1/20</span></div>
+      <div class="hud-score-box">
+        <div class="hud-score-label">Score</div>
+        <div class="hud-score-val" id="hud-score">0</div>
+      </div>
+    </div>
+
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:5%"></div></div>
+
+    <div class="q-card" id="q-card">
+      <span class="q-big-emoji" id="q-emoji"></span>
+      <p class="q-text" id="q-text"></p>
+      <div class="answers" id="answers"></div>
+      <div class="fact-box" id="fact-box">
+        <div class="fact-head" id="fact-head"></div>
+        <div id="fact-body"></div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="next-btn" id="next-btn" onclick="nextQ()">Next ➜</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ RESULT SCREEN ══════════════ -->
+  <div class="screen" id="screen-result">
+    <div class="result-card" id="result-card">
+      <span class="result-emoji" id="r-emoji"></span>
+      <div class="result-title" id="r-title"></div>
+      <div class="result-subj" id="r-subj"></div>
+      <div class="result-stars" id="r-stars"></div>
+      <div class="result-score" id="r-score"></div>
+      <div class="result-msg" id="r-msg"></div>
+      <div class="result-btns">
+        <button class="rb rb-again" onclick="replaySubject()">Try Again 🔄</button>
+        <button class="rb rb-home" onclick="goHome()">Choose Subject 🏠</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   QUESTION BANK  (20 per subject)
+═══════════════════════════════════════════ */
+const BANK = {
+
+science: [
+  {e:"🌱",q:"What do plants need to make food?",a:["Ice cream","Sunlight & water","Toys","Sand"],c:1,fh:"🌿 Plant magic!",f:"Plants make their own food using sunlight and water in a process called photosynthesis. They are amazing little chefs!"},
+  {e:"☀️",q:"What is the biggest star near Earth?",a:["Moon","Jupiter","Sun","Mars"],c:2,fh:"☀️ Sun fact!",f:"The Sun is so huge that about 1 million Earths could fit inside it! Its light takes 8 minutes to reach us."},
+  {e:"🌧️",q:"What comes down from clouds when it rains?",a:["Juice","Milk","Water","Sand"],c:2,fh:"💧 Rain fact!",f:"Rain comes from tiny water droplets in clouds. When drops get heavy enough, they fall down as rain!"},
+  {e:"🐛",q:"What does a caterpillar turn into?",a:["Frog","Butterfly","Fish","Bird"],c:1,fh:"🦋 Amazing change!",f:"A caterpillar wraps itself in a cocoon and transforms into a beautiful butterfly! This is called metamorphosis."},
+  {e:"🧲",q:"What does a magnet attract?",a:["Wood","Plastic","Iron/metal","Glass"],c:2,fh:"🧲 Magnet magic!",f:"Magnets attract iron and steel! Every magnet has a north pole and a south pole — opposite poles attract!"},
+  {e:"🌊",q:"What are oceans filled with?",a:["Juice","Fresh water","Salt water","Milk"],c:2,fh:"🌊 Ocean fact!",f:"Oceans cover more than 70% of Earth! The deepest part of the ocean is called the Mariana Trench."},
+  {e:"🐟",q:"How do fish breathe in water?",a:["Nose","Lungs","Gills","Mouth only"],c:2,fh:"🐟 Fish secret!",f:"Fish use gills to breathe! Gills take oxygen out of the water, just like our lungs take oxygen from air."},
+  {e:"🌙",q:"What shape does the Moon look most of the time?",a:["Square","Triangle","Circle/crescent","Star"],c:2,fh:"🌙 Moon fact!",f:"The Moon doesn't make its own light! It shines because sunlight bounces off it like a mirror in space."},
+  {e:"❄️",q:"What happens to water when it gets very cold?",a:["It disappears","It turns to ice","It turns to milk","It changes colour"],c:1,fh:"❄️ Ice fact!",f:"Water freezes into ice at 0°C! Ice is lighter than water — that is why ice cubes float in your drink!"},
+  {e:"🌈",q:"How many colours are in a rainbow?",a:["5","9","7","3"],c:2,fh:"🌈 Rainbow magic!",f:"A rainbow always has 7 colours: Red, Orange, Yellow, Green, Blue, Indigo, Violet. Remember ROY G BIV!"},
+  {e:"🌍",q:"What is the shape of the Earth?",a:["Flat","Round like a ball","Triangle","Square"],c:1,fh:"🌍 Earth shape!",f:"Earth is round like a big ball! Astronauts in space can actually see the Earth spinning slowly."},
+  {e:"🌬️",q:"What do we breathe to stay alive?",a:["Water","Smoke","Oxygen","Carbon dioxide"],c:2,fh:"🫁 Breathing fact!",f:"We breathe in oxygen and breathe out carbon dioxide. Plants do the opposite — they breathe in CO₂ and give us oxygen!"},
+  {e:"🦴",q:"What are the hard parts inside our body called?",a:["Muscles","Bones","Veins","Skin"],c:1,fh:"🦴 Bone fact!",f:"You have 206 bones in your body! Babies are born with about 300 bones — some join together as they grow!"},
+  {e:"🌡️",q:"Which season is the hottest?",a:["Winter","Autumn","Spring","Summer"],c:3,fh:"☀️ Season fact!",f:"Summer is hottest because Earth is tilted toward the Sun! Different parts of Earth have summer at different times of year."},
+  {e:"🌺",q:"What part of a plant makes seeds?",a:["Leaf","Root","Flower","Stem"],c:2,fh:"🌸 Flower fact!",f:"Flowers make seeds! Bees and butterflies help carry pollen between flowers so seeds can form. This is called pollination!"},
+  {e:"🔍",q:"Which sense do we use to smell things?",a:["Eyes","Ears","Nose","Hands"],c:2,fh:"👃 Nose fact!",f:"Your nose can smell over 1 trillion different smells! Smell also helps you taste food — try tasting with your nose blocked!"},
+  {e:"💧",q:"Where does rain water go after it falls?",a:["Into space","Into rivers and ground","Into clouds again only","Into trees only"],c:1,fh:"💧 Water cycle!",f:"Water flows into rivers, lakes and underground. Then the sun heats it up and turns it into vapour that rises back to form clouds!"},
+  {e:"🐞",q:"How many legs does an insect have?",a:["4","8","2","6"],c:3,fh:"🐜 Insect fact!",f:"All insects have exactly 6 legs! Spiders have 8 legs so they are NOT insects — they are called arachnids!"},
+  {e:"🌿",q:"What part of a plant takes in water from soil?",a:["Leaf","Stem","Root","Flower"],c:2,fh:"🌱 Root fact!",f:"Roots drink water from the soil! They also hold the plant firmly in the ground so it doesn't fall over in the wind."},
+  {e:"🪨",q:"Which of these is NOT alive?",a:["Ant","Rock","Tree","Bird"],c:1,fh:"🪨 Living things!",f:"Rocks are not alive! Living things need food, water and air to survive. Rocks are non-living — they just exist!"},
+],
+
+maths: [
+  {e:"🔢",q:"What is 2 + 3?",a:["4","5","6","7"],c:1,fh:"➕ Adding fun!",f:"When we add numbers together we get a bigger number. 2 fingers plus 3 fingers equals 5 fingers — try it!"},
+  {e:"🍎",q:"If you have 5 apples and eat 2, how many are left?",a:["2","4","3","1"],c:2,fh:"➖ Subtraction!",f:"Subtraction means taking away. 5 - 2 = 3! You can use your fingers to help count backwards."},
+  {e:"🔺",q:"How many sides does a triangle have?",a:["4","2","3","5"],c:2,fh:"🔺 Triangle time!",f:"The word 'tri' means three! A tricycle has 3 wheels, a triangle has 3 sides. Count the corners too — there are 3!"},
+  {e:"🎲",q:"Which number comes after 9?",a:["11","8","10","12"],c:2,fh:"🔟 Special ten!",f:"10 is special — it has two digits! When you hold up all 10 fingers, that's the number 10!"},
+  {e:"🟦",q:"How many sides does a square have?",a:["3","5","6","4"],c:3,fh:"🟦 Square fact!",f:"A square has 4 equal sides and 4 equal corners. A rectangle also has 4 sides but they are not all the same length!"},
+  {e:"🐾",q:"What is 1 + 1?",a:["3","1","2","4"],c:2,fh:"➕ Easy add!",f:"1 + 1 = 2! This is one of the first sums we ever learn. You can add 1 to any number to get the next number!"},
+  {e:"🍕",q:"If there are 4 slices and you eat 1, how many are left?",a:["2","4","3","1"],c:2,fh:"➖ Pizza maths!",f:"4 - 1 = 3! Taking away 1 always gives you the number just before it. So 4 take away 1 is 3!"},
+  {e:"⭕",q:"What shape is a wheel?",a:["Square","Triangle","Rectangle","Circle"],c:3,fh:"⭕ Circle fact!",f:"A circle is perfectly round with no corners or straight sides! Wheels are circles because they roll smoothly."},
+  {e:"🌟",q:"Count the stars: ⭐⭐⭐⭐⭐ — how many?",a:["4","6","3","5"],c:3,fh:"⭐ Counting!",f:"Counting one by one is the best way to be sure! Point to each star as you count: one, two, three, four, five!"},
+  {e:"📏",q:"Which is longer — 10 cm or 5 cm?",a:["5 cm","They're the same","10 cm","Can't tell"],c:2,fh:"📏 Measurement!",f:"10 cm is twice as long as 5 cm! A ruler has centimetre marks on it so we can measure things accurately."},
+  {e:"🎀",q:"What is 3 + 3?",a:["5","8","7","6"],c:3,fh:"➕ Doubles!",f:"3 + 3 = 6! Adding the same number twice is called a double. 1+1=2, 2+2=4, 3+3=6, 4+4=8, 5+5=10!"},
+  {e:"🐣",q:"Which number is the smallest?",a:["9","3","7","5"],c:1,fh:"🔢 Ordering!",f:"3 is the smallest! When we order numbers from smallest to biggest we call it ascending order: 3, 5, 7, 9."},
+  {e:"🚂",q:"A train has 2 carriages and adds 4 more. How many now?",a:["5","7","6","8"],c:2,fh:"➕ Word sums!",f:"2 + 4 = 6! Word problems help us use maths in real life. We read carefully to find the numbers to add or subtract."},
+  {e:"🟡",q:"How many corners does a circle have?",a:["1","4","2","0"],c:3,fh:"⭕ No corners!",f:"A circle has NO corners and NO straight sides! It is perfectly smooth and round all the way around."},
+  {e:"🌸",q:"What is 10 - 5?",a:["4","6","5","3"],c:2,fh:"➖ Half of ten!",f:"10 - 5 = 5! When you take half of 10 you get 5. 5 is also exactly halfway between 0 and 10!"},
+  {e:"🐝",q:"If 3 bees are in a hive and 3 more come in, how many bees?",a:["5","7","6","8"],c:2,fh:"🐝 Bee maths!",f:"3 + 3 = 6! This is the doubles fact again. Learning doubles makes adding faster — try memorising them!"},
+  {e:"📦",q:"Which shape has 6 faces like a box?",a:["Sphere","Cone","Cube","Cylinder"],c:2,fh:"📦 3D shapes!",f:"A cube has 6 faces, 8 corners and 12 edges! A dice is a cube — each face has a different number of dots."},
+  {e:"🔢",q:"What comes between 4 and 6?",a:["3","7","5","8"],c:2,fh:"🔢 Middle number!",f:"5 is between 4 and 6! On a number line, 5 sits exactly in the middle between 4 and 6."},
+  {e:"🍭",q:"You have 8 sweets and give 3 away. How many left?",a:["4","6","5","3"],c:2,fh:"🍬 Sharing maths!",f:"8 - 3 = 5! Sharing sweets is a lovely way to practise subtraction. Always share — maths AND kindness!"},
+  {e:"🌻",q:"How many petals? 🌸🌸 (each flower has 5 petals)",a:["8","12","10","7"],c:2,fh:"✖️ Intro to groups!",f:"2 groups of 5 = 10! Counting in groups is the start of multiplication. 5, 10, 15, 20 — counting in fives!"},
+],
+
+english: [
+  {e:"🔤",q:"Which letter does 'Apple' start with?",a:["B","E","A","P"],c:2,fh:"🍎 Letter A!",f:"A is for Apple! A is also the FIRST letter of the alphabet. There are 26 letters in the English alphabet."},
+  {e:"🐱",q:"Which word rhymes with CAT?",a:["Dog","Sun","Hat","Pig"],c:2,fh:"🎵 Rhyming!",f:"CAT and HAT rhyme because they end in the same sound -AT! Bat, mat, sat, rat all rhyme with cat too!"},
+  {e:"📖",q:"How many vowels are in the alphabet?",a:["3","7","5","4"],c:2,fh:"🔡 Vowels!",f:"The 5 vowels are A, E, I, O, U! Almost every word needs a vowel. Try saying a word without any — it's very hard!"},
+  {e:"🌞",q:"Which word is the opposite of 'night'?",a:["Dark","Day","Moon","Sleep"],c:1,fh:"↔️ Opposites!",f:"Opposites are called antonyms! Night and day, hot and cold, big and small, fast and slow are all antonyms."},
+  {e:"🐘",q:"What letter does 'Elephant' start with?",a:["A","I","O","E"],c:3,fh:"🔤 Letter E!",f:"E is a vowel and the 5th letter of the alphabet! Elephant, Egg, Eagle and Ear all start with E!"},
+  {e:"✏️",q:"Which of these is a naming word (noun)?",a:["Run","Big","Book","Happy"],c:2,fh:"📚 Nouns!",f:"A noun is a naming word — it names a person, place, thing or animal. Book, table, cat, school are all nouns!"},
+  {e:"🌈",q:"How many letters are in the word RAIN?",a:["3","5","4","6"],c:2,fh:"🔡 Counting letters!",f:"R-A-I-N has 4 letters! Counting letters helps us learn to spell. Try spelling your name — count those letters!"},
+  {e:"🔤",q:"Which letter comes after B in the alphabet?",a:["A","D","C","E"],c:2,fh:"🔤 Alphabet order!",f:"A, B, C — C comes after B! Knowing the alphabet in order helps us find words in a dictionary."},
+  {e:"🐶",q:"What sound does the letter 'D' make?",a:["/b/","/g/","/d/","/p/"],c:2,fh:"🔊 Phonics!",f:"D makes the /d/ sound like in Dog, Duck, Dance and Door! Phonics helps us decode and read new words."},
+  {e:"🏡",q:"What is the PLURAL of 'house'?",a:["Housies","Hice","Houses","Housen"],c:2,fh:"📝 Plurals!",f:"We add -s or -es to make most words plural! One cat → two cats, one house → two houses. Plural means more than one!"},
+  {e:"🌟",q:"Which of these is an action word (verb)?",a:["Table","Blue","Jump","Happy"],c:2,fh:"🏃 Verbs!",f:"Verbs are action words! Run, jump, eat, sleep, play are verbs. They tell us what someone IS DOING!"},
+  {e:"🍊",q:"What letter does 'Orange' start with?",a:["A","O","U","E"],c:1,fh:"🔤 Letter O!",f:"O is a vowel! Orange, Owl, Ocean and Otter all start with O. O is the 15th letter of the alphabet."},
+  {e:"🐍",q:"Which word rhymes with SNAKE?",a:["Bite","Nest","Cake","Slither"],c:2,fh:"🎵 -AKE words!",f:"SNAKE and CAKE both end in -AKE! Lake, bake, make, rake and wake all rhyme with snake!"},
+  {e:"📝",q:"Which sentence is correct?",a:["i like cats","I like cats.","i like cats.","I like cats"],c:1,fh:"✏️ Sentences!",f:"A sentence starts with a CAPITAL letter and ends with a full stop (.) A capital I is always used for yourself!"},
+  {e:"🎨",q:"What colour word is this: 'RED'?",a:["Size word","Colour word","Number word","Action word"],c:1,fh:"🎨 Adjectives!",f:"Red is an adjective — a describing word! Big, small, happy, red, soft are all adjectives. They describe nouns!"},
+  {e:"🐦",q:"What letter does 'Bird' start with?",a:["D","P","B","F"],c:2,fh:"🔤 Letter B!",f:"B is the 2nd letter of the alphabet! B makes the /b/ sound like in Ball, Bear, Banana and Butterfly!"},
+  {e:"🌙",q:"Which word is the OPPOSITE of 'big'?",a:["Huge","Tall","Small","Wide"],c:2,fh:"↔️ Size opposites!",f:"Big and small are opposites! Other size opposites: tall/short, wide/narrow, heavy/light, thick/thin."},
+  {e:"🔡",q:"Arrange in order: C, A, B",a:["B, A, C","C, A, B","A, B, C","C, B, A"],c:2,fh:"🔤 Alphabet order!",f:"A, B, C is the correct order! The alphabet has 26 letters. Learning them in order helps with reading and writing!"},
+  {e:"👁️",q:"How many syllables in the word BUTTER-FLY?",a:["1","4","2","3"],c:3,fh:"🎵 Syllables!",f:"But-ter-fly has 3 syllables! Clap while you say a word to count syllables. Each clap = one syllable!"},
+  {e:"🌊",q:"What letter does 'Water' start with?",a:["V","Y","W","M"],c:2,fh:"🔤 Letter W!",f:"W makes the /w/ sound! Water, Wind, Window and Worm all start with W. W is sometimes called 'double U'!"},
+],
+
+gk: [
+  {e:"🇳🇵",q:"What is the capital city of Nepal?",a:["Pokhara","Kathmandu","Biratnagar","Lalitpur"],c:1,fh:"🏙️ Nepal capital!",f:"Kathmandu is the capital and largest city of Nepal! It is located in a beautiful valley in the Himalayas."},
+  {e:"🌍",q:"How many continents are on Earth?",a:["5","8","6","7"],c:3,fh:"🌍 Continents!",f:"There are 7 continents: Asia, Africa, North America, South America, Europe, Australia and Antarctica!"},
+  {e:"🔴🔵⚪",q:"How many colours are in the Nepali flag?",a:["3","4","2","5"],c:2,fh:"🇳🇵 Nepal's flag!",f:"Nepal's flag has 2 colours — crimson red and blue border! It is the only national flag that is NOT rectangular!"},
+  {e:"🏔️",q:"What is the tallest mountain in the world?",a:["K2","Annapurna","Kangchenjunga","Mount Everest"],c:3,fh:"🏔️ Everest fact!",f:"Mount Everest is 8,849 metres tall! It is in Nepal and is called Sagarmatha in Nepali. Many brave climbers try to reach the top!"},
+  {e:"🐄",q:"What is the national animal of Nepal?",a:["Tiger","Elephant","Cow","Lion"],c:2,fh:"🐄 Nepal animal!",f:"The cow is the national animal of Nepal! Cows are considered sacred in Nepal and roam freely in the streets."},
+  {e:"🌸",q:"What is the national flower of Nepal?",a:["Rose","Lotus","Rhododendron","Sunflower"],c:2,fh:"🌸 Nepal flower!",f:"The Rhododendron (Lali Gurans) is Nepal's national flower! It blooms in beautiful red, pink and white in the hills."},
+  {e:"🐦",q:"What is the national bird of Nepal?",a:["Peacock","Danfe (Himalayan Monal)","Parrot","Eagle"],c:1,fh:"🐦 Nepal bird!",f:"The Danfe (Himalayan Monal Pheasant) is Nepal's national bird! It has beautiful rainbow-coloured feathers and lives in high mountains."},
+  {e:"🌊",q:"Which is the biggest ocean in the world?",a:["Atlantic","Indian","Arctic","Pacific"],c:3,fh:"🌊 Pacific Ocean!",f:"The Pacific Ocean is the biggest — it covers more than 30% of Earth's surface! It is bigger than all the land on Earth combined!"},
+  {e:"🌞",q:"In which direction does the sun rise?",a:["West","North","South","East"],c:3,fh:"🌅 Sunrise!",f:"The Sun rises in the East every morning! It sets in the West every evening. That's how we know directions!"},
+  {e:"🍚",q:"What is the staple food of Nepal?",a:["Bread","Dal Bhat","Pasta","Pizza"],c:1,fh:"🍛 Dal Bhat!",f:"Dal Bhat (lentil soup with rice) is eaten twice a day by most Nepali people! There is a saying: 'Dal Bhat power, 24 hour!'"},
+  {e:"🚗",q:"What is the colour of traffic lights that means STOP?",a:["Green","Yellow","Blue","Red"],c:3,fh:"🚦 Traffic lights!",f:"Red means STOP, yellow means GET READY, green means GO! Traffic lights keep us safe on the roads."},
+  {e:"❄️",q:"Which is the coldest continent?",a:["Africa","Asia","Europe","Antarctica"],c:3,fh:"🧊 Antarctica!",f:"Antarctica is so cold that temperatures can drop to -89°C! Penguins and seals live there. No humans live there permanently."},
+  {e:"🏥",q:"Who wears a white coat and treats sick people?",a:["Teacher","Doctor","Pilot","Chef"],c:1,fh:"👨‍⚕️ Doctors!",f:"Doctors help us get better when we are sick! They went to school for many years to learn how to help people."},
+  {e:"📚",q:"Where do we go to learn and study?",a:["Hospital","Airport","School","Market"],c:2,fh:"🏫 School!",f:"School is a wonderful place to learn, make friends and grow! Children in Nepal start school around age 5-6."},
+  {e:"🌙",q:"How many days are in one week?",a:["5","8","6","7"],c:3,fh:"📅 Week fact!",f:"One week has 7 days: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday and Saturday! Nepal's week starts on Sunday."},
+  {e:"🎵",q:"What is the national anthem of Nepal called?",a:["Jana Gana Mana","Sayaun Thunga","Amazing Grace","Jana Man"],c:1,fh:"🎶 Nepal anthem!",f:"'Sayaun Thunga Phool Ka' is Nepal's national anthem. It was adopted in 2007 and celebrates the beauty and diversity of Nepal!"},
+  {e:"💧",q:"What is the longest river in the world?",a:["Amazon","Ganges","Nile","Koshi"],c:2,fh:"🌊 River fact!",f:"The Nile River in Africa is the longest river — about 6,650 km! The Amazon in South America carries the most water."},
+  {e:"🌏",q:"On which continent is Nepal located?",a:["Africa","Europe","Australia","Asia"],c:3,fh:"🗺️ Nepal's location!",f:"Nepal is in Asia — specifically South Asia! It is sandwiched between two giant countries, India and China."},
+  {e:"🎠",q:"What do we call a person who flies an aeroplane?",a:["Driver","Sailor","Pilot","Captain only"],c:2,fh:"✈️ Pilot fact!",f:"A pilot flies aeroplanes! Pilots train for thousands of hours before they can fly a real passenger plane. Very cool job!"},
+  {e:"🌿",q:"What gas do plants give out that humans need?",a:["Carbon dioxide","Smoke","Oxygen","Nitrogen"],c:2,fh:"🌿 Oxygen!",f:"Plants release oxygen, which we breathe! This is why forests and trees are so important — they are our planet's lungs!"},
+],
+
+nepali: [
+  {e:"क",q:"'क' अक्षरबाट कुन शब्द सुरु हुन्छ?",a:["मुख","कलम","टोपी","घर"],c:1,fh:"✏️ 'क' बारे!",f:"'क' नेपाली वर्णमालाको पहिलो अक्षर हो! कलम, कान, कमल, काग आदि शब्दहरू 'क' बाट सुरु हुन्छन्।"},
+  {e:"🌸",q:"नेपालको राष्ट्रिय फूल कुन हो?",a:["गुलाब","सूर्यमुखी","लालीगुराँस","कमल"],c:2,fh:"🌸 लालीगुराँस!",f:"लालीगुराँस नेपालको राष्ट्रिय फूल हो! यो पहाडमा रातो, गुलाबी र सेतो रङमा फुल्छ।"},
+  {e:"🔢",q:"एक, दुई, ___ — अर्को संख्या के हो?",a:["पाँच","चार","तीन","छ"],c:2,fh:"🔢 नेपाली गन्ती!",f:"नेपालीमा: एक, दुई, तीन, चार, पाँच, छ, सात, आठ, नौ, दश — यसरी गन्दछौं!"},
+  {e:"🏠",q:"घरमा कहाँ सुत्छौं?",a:["बजार","खोला","ओछ्यान","विद्यालय"],c:2,fh:"🏠 घर!",f:"हामी ओछ्यानमा सुत्छौं! घरमा बस्ने कोठा, सुत्ने कोठा, भान्छा र शौचालय हुन्छ।"},
+  {e:"🌞",q:"नेपालीमा 'आकाश' भनेको के हो?",a:["पानी","पृथ्वी","ढुंगा","Sky"],c:3,fh:"🌤️ आकाश!",f:"आकाश अंग्रेजीमा Sky हो! नीलो आकाशमा बादल र चरा उड्छन्। रातमा तारा र चन्द्रमा देखिन्छ।"},
+  {e:"🐄",q:"नेपालको राष्ट्रिय पशु कुन हो?",a:["बाघ","हात्ती","गाई","सिंह"],c:2,fh:"🐄 गाई!",f:"गाई नेपालको राष्ट्रिय पशु हो! गाईलाई नेपालमा पवित्र मानिन्छ र यसबाट दूध पाइन्छ।"},
+  {e:"📚",q:"'विद्यालय' भनेको अंग्रेजीमा के हो?",a:["Hospital","Market","School","Home"],c:2,fh:"🏫 विद्यालय!",f:"विद्यालय भनेको School हो! विद्यालयमा हामी पढ्छौं, लेख्छौं र साथीहरूसँग खेल्छौं।"},
+  {e:"🎨",q:"रातो र नीलो मिसाउँदा कुन रङ बन्छ?",a:["हरियो","सुन्तला","बैजनी","पहेँलो"],c:2,fh:"🎨 रङ मिसाउने!",f:"रातो + नीलो = बैजनी! रातो + पहेँलो = सुन्तला, नीलो + पहेँलो = हरियो। रङ मिसाउन मज्जा आउँछ!"},
+  {e:"🌙",q:"'चन्द्रमा' भनेको अंग्रेजीमा के हो?",a:["Star","Sun","Sky","Moon"],c:3,fh:"🌙 चन्द्रमा!",f:"चन्द्रमा भनेको Moon हो! चन्द्रमाको आफ्नै प्रकाश हुँदैन — यो सूर्यको प्रकाश परावर्तन गर्छ।"},
+  {e:"✋",q:"हाम्रो एक हातमा कति औंला हुन्छन्?",a:["चार","छ","सात","पाँच"],c:3,fh:"✋ औंला!",f:"एक हातमा पाँच औंला हुन्छन्! दुवै हात मिलाएर दश औंला हुन्छन्। औंलाले गन्न सकिन्छ!"},
+  {e:"🍚",q:"नेपालको मुख्य खाना कुन हो?",a:["पिज्जा","बर्गर","दाल भात","ब्रेड"],c:2,fh:"🍛 दाल भात!",f:"दाल भात नेपालको मुख्य खाना हो! 'दाल भात खाको छ?' भनेर सोध्नु नेपालमा आदरको कुरा हो।"},
+  {e:"🌍",q:"नेपाल कुन महादेशमा छ?",a:["अफ्रिका","युरोप","अष्ट्रेलिया","एसिया"],c:3,fh:"🗺️ एसिया!",f:"नेपाल एसिया महादेशमा छ! नेपालको उत्तरमा चीन र दक्षिण, पूर्व, पश्चिममा भारत छ।"},
+  {e:"🏔️",q:"विश्वको सबैभन्दा अग्लो पर्वत कुन हो?",a:["K2","अन्नपूर्ण","कञ्चनजंघा","सगरमाथा"],c:3,fh:"🏔️ सगरमाथा!",f:"सगरमाथा (Mount Everest) विश्वकै सबैभन्दा अग्लो पर्वत हो! यो नेपालमा छ र ८,८४९ मिटर अग्लो छ।"},
+  {e:"🌈",q:"इन्द्रेणीमा कति रङ हुन्छन्?",a:["पाँच","नौ","सात","तीन"],c:2,fh:"🌈 इन्द्रेणी!",f:"इन्द्रेणीमा ७ रङ हुन्छन्! वर्षापछि घाम लाग्दा इन्द्रेणी देखिन्छ। यो प्रकृतिको सुन्दर उपहार हो।"},
+  {e:"👨‍👩‍👧",q:"आमा, बुवा र बच्चालाई मिलाएर के भनिन्छ?",a:["साथी","परिवार","छिमेकी","विद्यालय"],c:1,fh:"👨‍👩‍👧 परिवार!",f:"आमा, बुवा र बच्चाहरू मिलेर परिवार बन्छ! परिवारले हामीलाई माया गर्छ र सुरक्षित राख्छ।"},
+  {e:"🌿",q:"'रूख' भनेको अंग्रेजीमा के हो?",a:["Flower","Grass","Tree","Leaf"],c:2,fh:"🌳 रूख!",f:"रूख भनेको Tree हो! रूखले हामीलाई अक्सिजन दिन्छ, छाया दिन्छ र फल पनि दिन्छ।"},
+  {e:"🌊",q:"'पानी' भनेको अंग्रेजीमा के हो?",a:["Fire","Air","Earth","Water"],c:3,fh:"💧 पानी!",f:"पानी भनेको Water हो! पानी बिना कुनै पनि जीव बाँच्न सक्दैन। पानी बचाउनु हाम्रो कर्तव्य हो।"},
+  {e:"🐦",q:"नेपालको राष्ट्रिय चरा कुन हो?",a:["मयूर","डाँफे","तोता","चील"],c:1,fh:"🦚 डाँफे!",f:"डाँफे (Himalayan Monal) नेपालको राष्ट्रिय चरा हो! यसको पखेटामा सतरंगी रङ हुन्छ र यो हिमालमा बस्छ।"},
+  {e:"☀️",q:"'सूर्य' भनेको अंग्रेजीमा के हो?",a:["Moon","Star","Cloud","Sun"],c:3,fh:"☀️ सूर्य!",f:"सूर्य भनेको Sun हो! सूर्यले हामीलाई गर्मी र प्रकाश दिन्छ। सूर्यबिना पृथ्वीमा कुनै जीवन हुँदैनथ्यो।"},
+  {e:"🎉",q:"नेपालको सबैभन्दा ठूलो चाड कुन हो?",a:["होली","दसैँ","तिहार","छठ"],c:1,fh:"🎊 दसैँ!",f:"दसैँ नेपालको सबैभन्दा ठूलो चाड हो! यो १५ दिनसम्म मनाइन्छ र बडादसैँमा ठूलाहरूसँग टीका र आशीर्वाद लिइन्छ।"},
+]
+
+};
+
+const SUBJ_META = {
+  science:  { name:"Science",  icon:"🔬", color:"#4ECDC4", dark:"#2BAD9F" },
+  maths:    { name:"Maths",    icon:"🔢", color:"#FF6B6B", dark:"#C0392B" },
+  english:  { name:"English",  icon:"📖", color:"#A29BFE", dark:"#6C5CE7" },
+  gk:       { name:"GK",       icon:"🌍", color:"#FFB74D", dark:"#E65100" },
+  nepali:   { name:"Nepali",   icon:"🇳🇵", color:"#F06292", dark:"#C2185B" },
+};
+
+/* ── State ── */
+let activeSubj = null, questions = [], current = 0, score = 0, answered = [];
+
+/* ── Subject selection ── */
+function toggleSubject(el) {
+  document.querySelectorAll('.subj-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  activeSubj = el.dataset.subj;
+  const btn = document.getElementById('start-btn');
+  btn.classList.add('ready');
+  btn.textContent = `Start ${SUBJ_META[activeSubj].name} Quiz ➜`;
+}
+
+/* ── Start quiz ── */
+function startQuiz() {
+  if (!activeSubj) return;
+  questions = [...BANK[activeSubj]];
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [questions[i], questions[j]] = [questions[j], questions[i]];
+  }
+  current = 0; score = 0; answered = [];
+
+  const meta = SUBJ_META[activeSubj];
+  document.getElementById('hud-badge').textContent = meta.icon + ' ' + meta.name;
+  document.documentElement.style.setProperty('--subj-color', meta.color);
+  document.querySelectorAll('.prog-fill, .hud-badge').forEach(el => el.style.background = meta.color);
+  document.querySelectorAll('.next-btn').forEach(el => {
+    el.style.background = meta.color;
+    el.style.boxShadow = `0 5px 0 ${meta.dark}`;
+  });
+
+  showScreen('quiz');
+  showQ();
+}
+
+/* ── Show question ── */
+function showQ() {
+  const q = questions[current];
+  const total = questions.length;
+  document.getElementById('hud-qnum').textContent = `${current+1}/${total}`;
+  document.getElementById('hud-score').textContent = score;
+  document.getElementById('prog-fill').style.width = `${((current+1)/total)*100}%`;
+
+  const card = document.getElementById('q-card');
+  card.style.animation = 'none';
+  void card.offsetWidth;
+  card.style.animation = '';
+
+  document.getElementById('q-emoji').textContent = q.e;
+  document.getElementById('q-text').textContent = q.q;
+
+  const fb = document.getElementById('fact-box');
+  fb.className = 'fact-box';
+  document.getElementById('fact-head').textContent = '';
+  document.getElementById('fact-body').textContent = '';
+
+  document.getElementById('next-btn').style.display = 'none';
+
+  const ac = document.getElementById('answers');
+  ac.innerHTML = '';
+  q.a.forEach((txt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ans-btn';
+    btn.textContent = txt;
+    btn.onclick = () => pick(i, btn);
+    ac.appendChild(btn);
+  });
+}
+
+/* ── Pick answer ── */
+function pick(idx, btn) {
+  const q = questions[current];
+  document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+  const ok = idx === q.c;
+  answered[current] = ok;
+  if (ok) { score++; btn.classList.add('correct'); }
+  else { btn.classList.add('wrong'); document.querySelectorAll('.ans-btn')[q.c].classList.add('correct'); }
+  document.getElementById('hud-score').textContent = score;
+
+  document.getElementById('fact-head').textContent = q.fh;
+  document.getElementById('fact-body').textContent = q.f;
+  document.getElementById('fact-box').className = 'fact-box show';
+  document.getElementById('fact-box').style.background = ok ? '#E8F8F5' : '#FFF3E0';
+  document.getElementById('fact-box').style.color = ok ? '#1A6B5A' : '#6D4C00';
+  document.getElementById('fact-box').style.borderLeft = `4px solid ${ok?'#4ECDC4':'#FFB74D'}`;
+
+  const nb = document.getElementById('next-btn');
+  nb.style.display = 'inline-block';
+  nb.textContent = current < questions.length - 1
+    ? (ok ? '✓ Next ➜' : 'Next ➜')
+    : '🎉 See Results!';
+}
+
+function nextQ() {
+  current++;
+  if (current >= questions.length) showResult();
+  else showQ();
+}
+
+/* ── Results ── */
+function showResult() {
+  const meta = SUBJ_META[activeSubj];
+  const pct = score / questions.length;
+  let emoji, title, stars, msg;
+  if (pct === 1)      { emoji='🏆'; title='Perfect Score!'; stars='⭐⭐⭐⭐⭐'; msg=`Amazing! You got all ${questions.length} questions right in ${meta.name}! You are a superstar!`; }
+  else if (pct >= .8) { emoji='🌟'; title='Brilliant!'; stars='⭐⭐⭐⭐'; msg=`Wow, ${score} out of ${questions.length} in ${meta.name}! Just a tiny bit more practice and you will be perfect!`; }
+  else if (pct >= .5) { emoji='😊'; title='Well Done!'; stars='⭐⭐⭐'; msg=`Good job! You got ${score} out of ${questions.length} in ${meta.name}! Play again to score even higher!`; }
+  else                { emoji='💪'; title='Keep Trying!'; stars='⭐⭐'; msg=`You got ${score} out of ${questions.length}. Every time you play you learn more! You can do it!`; }
+
+  document.getElementById('r-emoji').textContent = emoji;
+  document.getElementById('r-title').textContent = title;
+  document.getElementById('r-subj').textContent = meta.icon + ' ' + meta.name + ' Quiz';
+  document.getElementById('r-stars').textContent = stars;
+  document.getElementById('r-score').textContent = `${score} / ${questions.length}`;
+  document.getElementById('r-score').style.color = meta.color;
+  document.getElementById('r-msg').textContent = msg;
+  document.querySelectorAll('.rb-again').forEach(b => b.style.background = meta.color);
+
+  showScreen('result');
+  if (pct >= .5) launchConfetti();
+}
+
+function replaySubject() { startQuiz(); }
+function goHome() { showScreen('select'); }
+
+/* ── Screen switching ── */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+/* ── Confetti ── */
+function launchConfetti() {
+  const cols = ['#FF6B6B','#4ECDC4','#FFE66D','#A29BFE','#FD79A8','#74B9FF','#55EFC4'];
+  const c = document.getElementById('confetti');
+  c.innerHTML = '';
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement('div');
+    p.className = 'cp';
+    const size = 7 + Math.random() * 9;
+    p.style.cssText = `left:${Math.random()*100}%;width:${size}px;height:${size}px;background:${cols[Math.floor(Math.random()*cols.length)]};border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*1.5}s;`;
+    c.appendChild(p);
+  }
+  setTimeout(() => c.innerHTML = '', 7000);
+}
+</script>
+</body>
+</html>
